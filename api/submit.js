@@ -67,7 +67,7 @@ module.exports = async function handler(req, res) {
         });
       } catch (e) {
         console.error('[BLOB_ERROR]', e.message);
-        // Continue anyway - local logging still works
+        return res.status(200).json({ ok: true, debugBlobError: e.message, debugBlobStack: String(e.stack || '').slice(0,500) });
       }
     }
 
