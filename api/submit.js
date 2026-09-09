@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
         const blobPath = `submissions/${timestamp}-${Date.now()}.json`;
 
         await put(blobPath, JSON.stringify(record), {
-          access: 'private',
+          access: 'public',
           token: process.env.BLOB_READ_WRITE_TOKEN
         });
       } catch (e) {
