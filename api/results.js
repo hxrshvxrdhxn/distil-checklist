@@ -13,7 +13,7 @@
 
 import { list } from '@vercel/blob';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const expected = process.env.RESULTS_PASSWORD;
 
   if (!expected) {

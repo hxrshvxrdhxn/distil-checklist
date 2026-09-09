@@ -1,8 +1,8 @@
 {
   "name": "distil-checklist",
   "private": true,
-  "type": "module",
+
   "dependencies": {
-    "@vercel/blob": "^2.6.1"
+    "@supabase/supabase-js": "^2.43.0"
   }
 }
