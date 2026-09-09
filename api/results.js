@@ -11,50 +11,56 @@
 // Auth is HTTP Basic, so the browser handles the prompt and there is no login
 // page to build or maintain. Username is ignored; only the password is checked.
 
-import { list } from '@vercel/blob';
+const { list } = require('@vercel/blob');
 
 module.exports = async function handler(req, res) {
-  const expected = process.env.RESULTS_PASSWORD;
-
-  if (!expected) {
-    return res
-      .status(500)
-      .send('RESULTS_PASSWORD is not set. Add it in Vercel and redeploy.');
-  }
-
-  if (!authorised(req.headers.authorization, expected)) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Distil results"');
-    return res.status(401).send('Authentication required.');
-  }
-
-  let blobs = [];
   try {
-    const out = await list({ prefix: 'submissions/' });
-    blobs = out.blobs || [];
-  } catch (e) {
-    console.error('blob list failed', e);
-    return res.status(502).send('Could not read the store.');
-  }
+    const expected = process.env.RESULTS_PASSWORD;
 
-  // Newest first.
-  blobs.sort((a, b) => (a.pathname < b.pathname ? 1 : -1));
-
-  const records = [];
-  for (const b of blobs.slice(0, 100)) {
-    try {
-      const r = await fetch(b.url, {
-        headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
-      });
-      if (r.ok) records.push(await r.json());
-    } catch (e) {
-      console.error('blob read failed', b.pathname, e);
+    if (!expected) {
+      return res
+        .status(500)
+        .send('RESULTS_PASSWORD is not set. Add it in Vercel and redeploy.');
     }
-  }
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  return res.status(200).send(render(records));
-}
+    if (!authorised(req.headers.authorization, expected)) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Distil results"');
+      return res.status(401).send('Authentication required.');
+    }
+
+    let blobs = [];
+    try {
+      const out = await list({ prefix: 'submissions/' });
+      blobs = out.blobs || [];
+    } catch (e) {
+      console.error('blob list failed', e);
+      return res.status(502).send('Could not read the store.');
+    }
+
+    // Newest first.
+    blobs.sort((a, b) => (a.pathname < b.pathname ? 1 : -1));
+
+    const records = [];
+    for (const b of blobs.slice(0, 100)) {
+      try {
+        const r = await fetch(b.url, {
+          headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
+        });
+        if (r.ok) records.push(await r.json());
+      } catch (e) {
+        console.error('blob read failed', b.pathname, e);
+      }
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).send(render(records));
+  } catch (err) {
+    console.error('[ERROR]', err);
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(500).send('Internal server error: ' + err.message);
+  }
+};
 
 function authorised(header, expected) {
   if (!header || !header.startsWith('Basic ')) return false;
@@ -64,14 +70,18 @@ function authorised(header, expected) {
   } catch (e) {
     return false;
   }
-  const given = decoded.slice(decoded.indexOf(':') + 1);
-  // Length-independent comparison, to avoid leaking length by timing.
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
+  try {
+    const given = decoded.slice(decoded.indexOf(':') + 1);
+    // Length-independent comparison, to avoid leaking length by timing.
+    const a = Buffer.from(given);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+    return diff === 0;
+  } catch (e) {
+    return false;
+  }
 }
 
 function esc(s) {

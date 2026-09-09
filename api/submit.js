@@ -54,28 +54,19 @@ module.exports = async function handler(req, res) {
       timestamp: record.submittedAt
     });
 
-    // Store in Supabase if configured
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+    // Store in Vercel Blob if configured
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
-        const { createClient } = require('@supabase/supabase-js');
-        const supabase = createClient(
-          process.env.SUPABASE_URL,
-          process.env.SUPABASE_SERVICE_KEY
-        );
+        const { put } = require('@vercel/blob');
+        const timestamp = new Date().getTime();
+        const blobPath = `submissions/${timestamp}-${Date.now()}.json`;
 
-        await supabase.from('submissions').insert([{
-          form: record.form,
-          respondent_name: record.respondentName,
-          respondent_role: record.respondentRole,
-          answered_count: record.answeredCount,
-          total_count: record.totalCount,
-          correction_count: record.correctionCount,
-          answers: record.answers,
-          user_agent: record.userAgent,
-          submitted_at: record.submittedAt
-        }]);
+        await put(blobPath, JSON.stringify(record), {
+          access: 'private',
+          token: process.env.BLOB_READ_WRITE_TOKEN
+        });
       } catch (e) {
-        console.error('[SUPABASE_ERROR]', e.message);
+        console.error('[BLOB_ERROR]', e.message);
         // Continue anyway - local logging still works
       }
     }
