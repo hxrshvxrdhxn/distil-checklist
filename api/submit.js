@@ -54,25 +54,23 @@ module.exports = async function handler(req, res) {
       timestamp: record.submittedAt
     });
 
-    // Store in Vercel Blob if configured
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      try {
-        const { put } = require('@vercel/blob');
-        const timestamp = new Date().getTime();
-        const blobPath = `submissions/${timestamp}-${Date.now()}.json`;
+    // Store in Vercel Blob. On Vercel, the SDK authenticates automatically via
+    // the short-lived VERCEL_OIDC_TOKEN + BLOB_STORE_ID that a connected Blob
+    // store injects; BLOB_READ_WRITE_TOKEN (a long-lived static token, only
+    // needed for local/external use) is used instead when present.
+    try {
+      const { put } = require('@vercel/blob');
+      const blobPath = `submissions/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
 
-        const putResult = await put(blobPath, JSON.stringify(record), {
-          access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-        return res.status(200).json({ ok: true, debugBlobPath: blobPath, debugBlobResult: putResult, debugTokenPrefix: String(process.env.BLOB_READ_WRITE_TOKEN || '').slice(0,20) });
-      } catch (e) {
-        console.error('[BLOB_ERROR]', e.message);
-        return res.status(200).json({ ok: true, debugBlobError: e.message, debugBlobStack: String(e.stack || '').slice(0,500) });
+      const putOptions = { access: 'public' };
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        putOptions.token = process.env.BLOB_READ_WRITE_TOKEN;
       }
-    } else {
-      const blobLikeKeys = Object.keys(process.env).filter(k => /blob|token/i.test(k));
-      return res.status(200).json({ ok: true, debugNoToken: true, debugEnvKeys: blobLikeKeys });
+
+      await put(blobPath, JSON.stringify(record), putOptions);
+    } catch (e) {
+      console.error('[BLOB_ERROR]', e.message);
+      // Continue anyway - the submission response isn't blocked on storage
     }
 
     return res.status(200).json({ ok: true });
