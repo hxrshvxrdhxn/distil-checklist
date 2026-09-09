@@ -71,7 +71,8 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true, debugBlobError: e.message, debugBlobStack: String(e.stack || '').slice(0,500) });
       }
     } else {
-      return res.status(200).json({ ok: true, debugNoToken: true });
+      const blobLikeKeys = Object.keys(process.env).filter(k => /blob|token/i.test(k));
+      return res.status(200).json({ ok: true, debugNoToken: true, debugEnvKeys: blobLikeKeys });
     }
 
     return res.status(200).json({ ok: true });
