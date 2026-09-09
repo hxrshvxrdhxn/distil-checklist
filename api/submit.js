@@ -61,14 +61,17 @@ module.exports = async function handler(req, res) {
         const timestamp = new Date().getTime();
         const blobPath = `submissions/${timestamp}-${Date.now()}.json`;
 
-        await put(blobPath, JSON.stringify(record), {
+        const putResult = await put(blobPath, JSON.stringify(record), {
           access: 'public',
           token: process.env.BLOB_READ_WRITE_TOKEN
         });
+        return res.status(200).json({ ok: true, debugBlobPath: blobPath, debugBlobResult: putResult, debugTokenPrefix: String(process.env.BLOB_READ_WRITE_TOKEN || '').slice(0,20) });
       } catch (e) {
         console.error('[BLOB_ERROR]', e.message);
         return res.status(200).json({ ok: true, debugBlobError: e.message, debugBlobStack: String(e.stack || '').slice(0,500) });
       }
+    } else {
+      return res.status(200).json({ ok: true, debugNoToken: true });
     }
 
     return res.status(200).json({ ok: true });
