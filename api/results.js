@@ -154,6 +154,8 @@ details summary{cursor:pointer;color:var(--blue);font-size:14px;margin-top:16px}
 
     h += `<div class="sub"><h2>${esc(rec.respondentName)}</h2>`;
     h += `<p class="meta">${
+      rec.form ? '<strong>' + esc(rec.form) + '</strong> &middot; ' : ''
+    }${
       rec.respondentRole ? esc(rec.respondentRole) + ' &middot; ' : ''
     }${esc(new Date(rec.submittedAt).toLocaleString('en-GB'))} &middot; ${
       rec.answeredCount
